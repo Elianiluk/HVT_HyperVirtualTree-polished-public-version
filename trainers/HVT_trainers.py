@@ -398,7 +398,7 @@ class NIN_HVT_Trainer(HVT_Trainer):
 
     def _init_model(self):
         set_random_seed(0)
-        model = NIN_HyperDecisioNet(input_channels=INPUT_SIZE[self.dataset_name][0])
+        model = NIN_HyperDecisioNet(input_channels=INPUT_SIZE[self.dataset_name][0],dataset=self.dataset_name)
         # model.apply(functools.partial(weights_init_kaiming, scale=0.01))
         # model.apply(self.weights_init_xavier)
         return model
@@ -500,6 +500,7 @@ class WideResNet_HVT_Trainer(HVT_Trainer):
 if __name__ == '__main__':
     trainer = WideResNet_HVT_Trainer()
     # trainer = NIN_HVT_Trainer()
+    print(trainer.dataset_name)
     # trainer = wide_resnet
     # trainer.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # print(trainer.device)
@@ -517,3 +518,4 @@ if __name__ == '__main__':
     results = trainer.evaluate()
     # experiment_name = f"{trainer.dataset_name}_{trainer.config['exp_name']}_params_num_{params_num}"
     # prepare_output_to_local(results, experiment_name)
+

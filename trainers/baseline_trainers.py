@@ -25,8 +25,14 @@ class NetworkInNetworkTrainer(BasicTrainer):
 
     def _init_model(self):
         num_in_channels = INPUT_SIZE[self.dataset_name][0]
-        model = NetworkInNetwork(num_classes=self.num_classes, num_in_channels=num_in_channels,
-                                 config=[(192, 5), (160, 1), (96, 1), 'M', 'D', (192, 5), (192, 1), (192, 1), 'A', 'D', (192, 3), (192, 1), (10, 1)])
+        if self.dataset_name == "CIFAR100":
+            model = NetworkInNetwork(num_classes=self.num_classes, num_in_channels=num_in_channels,
+                                     config=[(192, 5), (160, 1), (96, 1), 'M', 'D', (192, 5), (192, 1), (192, 1), 'A', 'D', (192, 3), (192, 1), (100, 1)])
+        else:
+            model = NetworkInNetwork(num_classes=self.num_classes, num_in_channels=num_in_channels,
+                                     config=[(192, 5), (160, 1), (96, 1), 'M', 'D', (192, 5), (192, 1), (192, 1), 'A',
+                                             'D', (192, 3), (192, 1), (10, 1)])
+
         for m in model.modules():
             if isinstance(m, nn.Conv2d):
                 m.weight.data.normal_(0, 0.05)
@@ -67,7 +73,7 @@ class WideResNetTrainer(BasicTrainer):
         return optimizer
 
     def _init_model(self):
-        model = wide_resnet28_10(num_classes=self.num_classes)
+        model = wide_resnet28_10(num_classes=self.num_classes,dataset=self.dataset_name)
         return model
 
     def register_hooks(self, activation_dict):
@@ -135,6 +141,7 @@ class VGG11Trainer(BasicTrainer):
 if __name__ == '__main__':
     trainer = NetworkInNetworkTrainer()
     # trainer = WideResNetTrainer()
+    print(trainer.dataset_name)
     print(torch.cuda.is_available())
     print(torch.cuda.device_count())
     print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "No GPU")

@@ -78,7 +78,7 @@ class HyperNet(nn.Module):
 
 class SharedNet(nn.Module):
 
-    def __init__(self, input_channels=3):
+    def __init__(self, input_channels=3,dataset='CIFAR10'):
         super().__init__()
 
         hypernet_cls = HyperNet
@@ -90,9 +90,15 @@ class SharedNet(nn.Module):
                                              nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
                                              nn.Dropout(0.5))
 
-        self.after_features = nn.Sequential((nn.Conv2d(96, 96, 3, padding=1)), nn.ReLU(inplace=True),
-                                            (nn.Conv2d(96, 96, 1, padding=0)), nn.ReLU(inplace=True),
-                                            (nn.Conv2d(96, 10, 1, padding=0)))
+        if dataset == 'CIFAR100':
+            self.after_features = nn.Sequential((nn.Conv2d(96, 96, 3, padding=1)), nn.ReLU(inplace=True),
+                                                (nn.Conv2d(96, 96, 1, padding=0)), nn.ReLU(inplace=True),
+                                                (nn.Conv2d(96, 100, 1, padding=0)))
+        else:
+            self.after_features = nn.Sequential((nn.Conv2d(96, 96, 3, padding=1)), nn.ReLU(inplace=True),
+                                                (nn.Conv2d(96, 96, 1, padding=0)), nn.ReLU(inplace=True),
+                                                (nn.Conv2d(96, 10, 1, padding=0)))
+
 
         self.hyper = hypernet_cls()
         # self.right = subnet_cls(node_code=(0,))
@@ -125,10 +131,11 @@ class SharedNet(nn.Module):
 
 
 class NIN_HyperDecisioNet(nn.Module):
-    def __init__(self, input_channels=3):
+    def __init__(self, input_channels=3,dataset="CIFAR10"):
         super().__init__()
+        self.dataset = dataset
         sharednet_cls = SharedNet
-        self.hyperdecisionet = sharednet_cls(input_channels)
+        self.hyperdecisionet = sharednet_cls(input_channels,dataset)
         self.classifier = nn.AdaptiveAvgPool2d((1, 1))  # original option
         print("NetworkInNetworkDecisioNet init - Using the following config:")
         print(self)

@@ -125,7 +125,7 @@ class BasicTrainer:
         parser.add_argument('--weights_path', '-w', type=str, help="Path to the model's weights file", default=None)
         parser.add_argument('--batch_size', type=int, help="Train batch size", default=128)
         parser.add_argument('--test_batch_size', type=int, help="Test batch size", default=128)
-        parser.add_argument('--num_epochs', type=int, help="Number of training epochs", default=0)
+        parser.add_argument('--num_epochs', type=int, help="Number of training epochs", default=1)
         parser.add_argument('--num_workers', type=int, help="Number of dataloader workers", default=-1)
         parser.add_argument('--include_top5', action='store_true', help="Whether to log top5 accuracy data")
         parser.add_argument('--use_wandb', action='store_true', help="Track run with Weights and Biases")

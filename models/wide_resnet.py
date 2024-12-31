@@ -67,7 +67,7 @@ class WideBasicBlockV2(WideBasicBlock):
 
 
 class WideResNet(nn.Module):
-    def __init__(self, depth, k, dropout_p, num_classes, norm_layer=None):
+    def __init__(self, depth, k, dataset,dropout_p, num_classes, norm_layer=None):
         super().__init__()
         n = (depth - 4) / 6
         stage_sizes = [16, 16 * k, 32 * k, 64 * k]
@@ -75,7 +75,10 @@ class WideResNet(nn.Module):
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
 
-        self.conv1 = nn.Conv2d(3, stage_sizes[0], kernel_size=3, stride=1, padding=1, bias=False)
+        if dataset == "FashionMNIST":
+            self.conv1 = nn.Conv2d(1, stage_sizes[0], kernel_size=3, stride=1, padding=1, bias=False)
+        else:
+            self.conv1 = nn.Conv2d(3, stage_sizes[0], kernel_size=3, stride=1, padding=1, bias=False)
         self.layer1 = self.make_wide_layer(in_planes, stage_sizes[1], n, dropout_p, 1)
         self.layer2 = self.make_wide_layer(stage_sizes[1], stage_sizes[2], n, dropout_p, 2)
         self.layer3 = self.make_wide_layer(stage_sizes[2], stage_sizes[3], n, dropout_p, 2)
@@ -124,6 +127,7 @@ class WideResNet(nn.Module):
 def wide_resnet(
         depth: int,
         k: int,
+        dataset : str,
         dropout_p: float,
         num_classes: int,
         pretrained: bool,
@@ -131,7 +135,7 @@ def wide_resnet(
         **kwargs: Any
 ) -> WideResNet:
     assert (depth - 4) % 6 == 0, 'depth of Wide ResNet (WRN) should be 6n + 4'
-    model = WideResNet(depth, k, dropout_p, num_classes, **kwargs)
+    model = WideResNet(depth, k, dataset,dropout_p, num_classes, **kwargs)
     model_key = 'cifar{}-wide_resnet{}_{}'.format(num_classes, depth, k)
     if pretrained and model_key in MODEL_URL_DICT:
         state_dict = torch.hub.load_state_dict_from_url(MODEL_URL_DICT[model_key], progress=progress)
@@ -139,7 +143,7 @@ def wide_resnet(
     return model
 
 
-def wide_resnet40_4(dropout_p=0.3, num_classes=10, pretrained=False, progress=True, **kwargs: Any) -> WideResNet:
+def wide_resnet40_4(dataset="CIFAR10",dropout_p=0.3, num_classes=10, pretrained=False, progress=True, **kwargs: Any) -> WideResNet:
     r"""WRN-40-4 model from
     `"Wide Residual Networks" <https://arxiv.org/pdf/1512.03385.pdf>`_.
     Args:
@@ -148,10 +152,10 @@ def wide_resnet40_4(dropout_p=0.3, num_classes=10, pretrained=False, progress=Tr
         pretrained (bool): If True, returns a model pre-trained on CIFAR-10/100
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return wide_resnet(40, 4, dropout_p, num_classes, pretrained, progress, **kwargs)
+    return wide_resnet(40, 4, dataset,dropout_p, num_classes, pretrained, progress, **kwargs)
 
 
-def wide_resnet28_10(dropout_p=0.3, num_classes=10, pretrained=False, progress=True, **kwargs: Any) -> WideResNet:
+def wide_resnet28_10(dataset="CIFAR10",dropout_p=0.3, num_classes=10,pretrained=False, progress=True, **kwargs: Any) -> WideResNet:
     r"""WRN-28-10 model from
     `"Wide Residual Networks" <https://arxiv.org/pdf/1512.03385.pdf>`_.
     Args:
@@ -160,10 +164,10 @@ def wide_resnet28_10(dropout_p=0.3, num_classes=10, pretrained=False, progress=T
         pretrained (bool): If True, returns a model pre-trained on CIFAR-10/100
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return wide_resnet(28, 10, dropout_p, num_classes, pretrained, progress, **kwargs)
+    return wide_resnet(28, 10, dataset,dropout_p, num_classes, pretrained, progress, **kwargs)
 
 
-def wide_resnet16_8(dropout_p=0.3, num_classes=10, pretrained=False, progress=True, **kwargs: Any) -> WideResNet:
+def wide_resnet16_8(dataset="CIFAR10",dropout_p=0.3, num_classes=10, pretrained=False, progress=True, **kwargs: Any) -> WideResNet:
     r"""WRN-16-8 model from
     `"Wide Residual Networks" <https://arxiv.org/pdf/1512.03385.pdf>`_.
     Args:
@@ -172,7 +176,7 @@ def wide_resnet16_8(dropout_p=0.3, num_classes=10, pretrained=False, progress=Tr
         pretrained (bool): If True, returns a model pre-trained on CIFAR-10/100
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    return wide_resnet(16, 8, dropout_p, num_classes, pretrained, progress, **kwargs)
+    return wide_resnet(16, 8, dataset,dropout_p, num_classes, pretrained, progress, **kwargs)
 
 
 if __name__ == '__main__':
