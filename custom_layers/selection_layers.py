@@ -74,6 +74,10 @@ class EmbeddingBinarySelectionLayer(SelectionLayer):
         x = torch.flatten(x, 1)
         if self.do_batchnorm:
             x = self.bn(x)
+        device = next(self.fc.parameters()).device
+        x = x.to(device)
+
+        # Proceed with the computation
         sigmas = self.fc(x)
         if self.training:
             x_b, x_b_r = self.binarization(sigmas[:, 2], binarize=True)

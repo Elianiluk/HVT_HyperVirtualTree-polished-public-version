@@ -18,9 +18,9 @@ from utils.constants import LABELS_MAP, CLASSES_NAMES, INPUT_SIZE, NUM_CLASSES
 from utils.metrics_tracker import SigmaLossMetricsTracker
 from utils.common_tools import set_random_seed, weights_init_kaiming
 import torch.nn.init as init
-from models.wide_resnet_HVT import WideResNet_HyperDecisioNet_2_split, WideResNet_HyperDecisioNet_1_split
+from models.wide_resnet_HVT import WideResNet_HyperDecisioNet_2_split, WideResNet_HyperDecisioNet_1_split, WideResNet_HyperDecisioNet_many_split
 
-WRESNET_STAGE_SIZES = {'100_baseline': ([16, 16, 16], 3),
+WRESNET_STAGE_SIZES = {'100_baseline': ([16, 16, 16,16,16,16], 3),
                        '100_baseline_single_early': ([16, 16, 32], 2)}
 
 class HVT_Trainer(BasicTrainer):
@@ -132,6 +132,13 @@ class HVT_Trainer(BasicTrainer):
         # Entire Model Analysis
         print("Entire Model Analysis: ")
         cls_acc = (predictions == cls_targets).sum().item() / targets.size(0)
+
+        #problem with shapes- sigms == sigma_targets
+        if sigmas.shape[1] != sigma_targets.shape[1]:
+            min_dim = min(sigmas.shape[1], sigma_targets.shape[1])
+            sigmas = sigmas[:, :min_dim]
+            sigma_targets = sigma_targets[:, :min_dim]
+
         sigma_diffs = (sigmas == sigma_targets)
         encoding = {0: 'both wrong', 1: 'first correct', 2: 'second correct', 3: 'both correct'}
         encoded_results = torch.sum(sigma_diffs * torch.tensor([1., 2.]).to(self.device), dim=1)
@@ -445,10 +452,11 @@ class WideResNet_HVT_Trainer(HVT_Trainer):
     def _init_model(self):
         num_in_channels = INPUT_SIZE[self.dataset_name][0]
         num_classes = NUM_CLASSES[self.dataset_name]
+        num_hyper_blocks = self.config.get('num_hyper_blocks', 2)
         if self.wrn_cfg_name == '100_baseline':
             stage_sizes = WRESNET_STAGE_SIZES['100_baseline'][0]
-            model = WideResNet_HyperDecisioNet_2_split(28, 10, dropout_p=0.3, num_classes=num_classes,
-                                                       num_in_channels=num_in_channels, stage_sizes=stage_sizes)
+            model = WideResNet_HyperDecisioNet_many_split(28, 10, dropout_p=0.3, num_classes=num_classes,
+                                                       num_in_channels=num_in_channels, stage_sizes=stage_sizes,num_of_hyper_blocks=num_hyper_blocks)
         else:
             stage_sizes = WRESNET_STAGE_SIZES['100_baseline_single_early'][0]
             model = WideResNet_HyperDecisioNet_1_split(28, 10, dropout_p=0.3, num_classes=num_classes,
@@ -464,6 +472,7 @@ class WideResNet_HVT_Trainer(HVT_Trainer):
     def init_parser(self):
         parser = super().init_parser()
         parser.add_argument('--wrn_cfg_name', type=str, default='100_baseline', help='Name of the Wide-ResNet config')
+        parser.add_argument("--num_hyper_blocks", type=int, default=2, help="Number of hyper blocks to use in the model")
         return parser
 
     def _init_config_attributes(self):
@@ -484,18 +493,41 @@ class WideResNet_HVT_Trainer(HVT_Trainer):
                                          dataset_name=self.dataset_name)
 
     def _feed_forward(self, inputs, targets):
+        # Split targets into classification and sigma targets
         cls_targets, *sigma_targets = targets
         sigma_targets = torch.column_stack(sigma_targets)
+
+        # Ensure binary operation flag
         binarize = self.always_binarize or random.random() > 0.5
+
+        # Forward pass through the model
         outputs, sigma_b, sigma_r, _ = self.model(inputs, binarize=binarize)
+
+        # Ensure sigma_b has the correct dimensions
         sigma_b = sigma_b.unsqueeze(1) if sigma_b.dim() == 1 else sigma_b
-        # print(f'Cls correct: {sum(torch.argmax(outputs, 1)==cls_targets)}')
-        # print(f'Sigma correct: {sum(sigmas==sigma_targets)}\n')
+
+        # Debugging shapes
+        # print(f"sigma_b shape: {sigma_b.shape}")
+        # print(f"sigma_targets shape: {sigma_targets.shape}")
+
+        # Align shapes if necessary
+        if sigma_b.shape[1] != sigma_targets.shape[1]:
+            min_dim = min(sigma_b.shape[1], sigma_targets.shape[1])
+            sigma_b = sigma_b[:, :min_dim]
+            sigma_targets = sigma_targets[:, :min_dim]
+
+        # Compute losses
         cls_loss = self.cls_criterion(outputs, cls_targets.long())
         sigma_loss = self.sigma_criterion(sigma_b, sigma_targets.float())
+
+        # Combine losses
         combined_loss = cls_loss + self.beta * sigma_loss
+
+        # Update metrics
         self.metrics_tracker.update(cls_loss, sigma_loss, combined_loss, outputs, cls_targets, sigma_b, sigma_targets)
+
         return outputs, combined_loss
+
 
 if __name__ == '__main__':
     trainer = WideResNet_HVT_Trainer()
@@ -509,6 +541,7 @@ if __name__ == '__main__':
     print(torch.cuda.is_available())
     print(torch.cuda.device_count())
     print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "No GPU")
+    print(trainer.model._get_name())
 
     # trainer = NIN_HVT_Trainer()
     input_tensor = torch.randn(1, 3, 32, 32).to(trainer.device)
