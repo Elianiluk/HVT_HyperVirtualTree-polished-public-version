@@ -547,6 +547,7 @@ if __name__ == '__main__':
     input_tensor = torch.randn(1, 3, 32, 32).to(trainer.device)
     params_num = sum(p.numel() for p in trainer.model.parameters() if p.requires_grad)
     print(f'Number Of Parameters: {params_num}')
+    print(trainer.model)
     trainer.train_model()
     results = trainer.evaluate()
     # experiment_name = f"{trainer.dataset_name}_{trainer.config['exp_name']}_params_num_{params_num}"
